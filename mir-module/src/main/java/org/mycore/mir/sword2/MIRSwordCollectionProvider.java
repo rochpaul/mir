@@ -17,20 +17,19 @@ import org.swordapp.server.UriRegistry;
 /**
  * @author Sebastian Hofmann (mcrshofm)
  */
-public class MIRSwordCollectionProvider extends MCRSwordCollectionProvider {
+public abstract class MIRSwordCollectionProvider extends MCRSwordCollectionProvider {
 
     private MCRSwordDefaultAuthHandler mcrSwordDefaultAuthHandler;
 
     private MIRSwordMetadataProvider mirSwordMetadataProvider;
 
-    private MIRSwordIngester mirSwordIngester;
+    protected MCRSwordIngester mirSwordIngester;
 
     private MCRSwordSolrObjectIDSupplier mcrSwordSolrObjectIDSupplier;
 
     public MIRSwordCollectionProvider() {
         mcrSwordDefaultAuthHandler = new MCRSwordDefaultAuthHandler();
         mirSwordMetadataProvider = new MIRSwordMetadataProvider();
-        mirSwordIngester = new MIRSwordIngester();
         mcrSwordSolrObjectIDSupplier = new MCRSwordSolrObjectIDSupplier(new SolrQuery("objectType:mods"));
     }
 
