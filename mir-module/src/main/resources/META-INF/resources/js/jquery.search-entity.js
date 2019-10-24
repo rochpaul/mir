@@ -516,6 +516,11 @@
     $resultList.attr("role", "menu");
     $resultList.addClass("dropdown-menu");
     $resultBox.append($resultList);
+    
+    var $furtherInfoBox = $(document.createElement("div"));
+
+    var simpleComment  = $(document.createElement("p"));
+    $furtherInfoBox.append(simpleComment);
 
     if (data && data.length > 0) {
       $(data).each(function(index, item) {
@@ -530,6 +535,61 @@
           that.updateOutput(item);
           that.clearAll();
         });
+     
+        /* Initial handling on further information on person mouseover */
+        $person.on("mouseover", function(event) {
+
+            $resultBox.append($furtherInfoBox);
+
+            if (item.value.includes('gnd'))
+            {
+
+              let urlGNDMarc21 = item.value + '/about/marcxml';
+              let urlGNDMarc21Https = urlGNDMarc21.replace("http", "https");
+
+              let urlCorsProxy = 'https://cors-anywhere.herokuapp.com/';
+
+              console.log(urlGNDMarc21Https);
+              console.log(urlCorsProxy + urlGNDMarc21Https);
+
+              $.ajax({
+                url : urlCorsProxy + urlGNDMarc21Https ,
+                dataType: 'xml',
+                timeout : 5000,
+                type: 'GET',
+                success : function(response) {
+
+                  var digits5xx = 3;
+
+                  var xmlAsString = (new XMLSerializer()).serializeToString(response);
+                  var $xmlData = $($.parseXML(xmlAsString));
+
+                  var reqAuthFileInformation = {};
+
+                  $xmlData.find("datafield[tag^='5']").each(function(){
+
+                    if ($(this).attr("tag").length === digits5xx) {
+
+                      console.log(this);
+
+                      reqAuthFileInformation[$(this).find("subfield[code='i']").text()] =  $(this).find("subfield[code='a']").text();
+                    }
+                  });
+
+                  simpleComment.text(JSON.stringify(reqAuthFileInformation));
+
+                  //console.log(reqAuthFileInformation);
+
+                },
+                error : function(error) {
+                  console.log(error);
+                }
+              });
+            }
+          });
+     
+        
+        
 
         $li.append($person);
 
