@@ -33,6 +33,9 @@
 +function($) {
   'use strict';
 
+  /* insert stylesheet via xeditor */
+  $('head').append('<link rel="stylesheet" href="jquery.search-entity.css" type="text/css" />');
+  
   var toggle = '[data-search="searchEntity"]';
 
   var SearchEntity = function(element, options) {
@@ -510,17 +513,22 @@
     var options = this.options;
 
     var $resultBox = $(document.createElement("div"));
-    $resultBox.addClass("dropdown");
+    $resultBox.addClass("row");
+
+    var $resultListContainer = $(document.createElement("div"));
+    $resultListContainer.addClass("col-sm mir-multi-column-dropdown-container");
+    $resultBox.append($resultListContainer);
 
     var $resultList = $(document.createElement("ul"));
     $resultList.attr("role", "menu");
-    $resultList.addClass("dropdown-menu");
-    $resultBox.append($resultList);
-    
-    var $furtherInfoBox = $(document.createElement("div"));
+    $resultList.addClass("multi-column-dropdown mir-multi-column-dropdown");
+    $resultListContainer.append($resultList);
 
-    var simpleComment  = $(document.createElement("p"));
-    $furtherInfoBox.append(simpleComment);
+    var $furtherInfoBox = $(document.createElement("div"));
+    $furtherInfoBox.addClass("col-sm mir-multi-column-dropdown-container");
+
+    var listFurtherInfos = $('<ul>').appendTo($furtherInfoBox);
+    listFurtherInfos.addClass("mir-list-otherInfo");
 
     if (data && data.length > 0) {
       $(data).each(function(index, item) {
@@ -537,12 +545,12 @@
         });
      
         /* Initial handling on further information on person mouseover */
-        $person.on("mouseover", function(event) {
+        $person.on("mouseover", function (event) {
 
+            listFurtherInfos.empty();
             $resultBox.append($furtherInfoBox);
 
-            if (item.value.includes('gnd'))
-            {
+            if (item.value.includes('gnd')) {
 
               let urlGNDMarc21 = item.value + '/about/marcxml';
               let urlGNDMarc21Https = urlGNDMarc21.replace("http", "https");
@@ -553,11 +561,11 @@
               console.log(urlCorsProxy + urlGNDMarc21Https);
 
               $.ajax({
-                url : urlCorsProxy + urlGNDMarc21Https ,
+                url: urlCorsProxy + urlGNDMarc21Https,
                 dataType: 'xml',
-                timeout : 5000,
+                timeout: 5000,
                 type: 'GET',
-                success : function(response) {
+                success: function (response) {
 
                   var digits5xx = 3;
 
@@ -566,31 +574,32 @@
 
                   var reqAuthFileInformation = {};
 
-                  $xmlData.find("datafield[tag^='5']").each(function(){
+                  $xmlData.find("datafield[tag^='5']").each(function () {
 
                     if ($(this).attr("tag").length === digits5xx) {
 
                       console.log(this);
 
-                      reqAuthFileInformation[$(this).find("subfield[code='i']").text()] =  $(this).find("subfield[code='a']").text();
+                      //reqAuthFileInformation[$(this).find("subfield[code='i']").text()] = $(this).find("subfield[code='a']").text();
+
+                      listFurtherInfos.append($(document.createElement('li')).text(
+                        $(this).find("subfield[code='i']").text() + " : " + $(this).find("subfield[code='a']").text()));
+
                     }
                   });
 
-                  simpleComment.text(JSON.stringify(reqAuthFileInformation));
+                  //simpleComment.text(JSON.stringify(reqAuthFileInformation));
 
                   //console.log(reqAuthFileInformation);
 
                 },
-                error : function(error) {
+                error: function (error) {
                   console.log(error);
                 }
               });
             }
           });
      
-        
-        
-
         $li.append($person);
 
         $resultList.append($li);
