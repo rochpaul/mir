@@ -7,35 +7,33 @@
  * <pre>
  * Usage:
  *
- * 	Parameters:
- * 		- target 				: the target container
- * 		- search 				: always &quot;searchEntity&quot;
+ *  Parameters:
+ *      - target                : the target container
+ *      - search                : always &quot;searchEntity&quot;
  *
- * 		- searchEntityType		: can be person or organisation
+ *      - searchEntityType      : can be person or organisation
  *
- * 		- searchType
- * 			- SELECT			: add searchType selection menu
- * 			- GND 				: search through http://lobid.org
- * 			- VIAF				: search through http://www.viaf.org
- * 		    - ORCID             : search through https://pub.orcid.org/
- * 		- searchOutput			: the output field for person the nameIdentifer ID,
- * 								  if nothing specified the input field is used
- * 		- searchOutputType		: the output field for person the nameIdentifer type,
- * 								  if nothing specified the input field is used
+ *      - searchType
+ *          - SELECT            : add searchType selection menu
+ *          - GND               : search through http://lobid.org
+ *          - VIAF              : search through http://www.viaf.org
+ *          - ORCID             : search through https://pub.orcid.org/
+ *      - searchOutput          : the output field for person the nameIdentifer ID,
+ *                                if nothing specified the input field is used
+ *      - searchOutputType      : the output field for person the nameIdentifer type,
+ *                                if nothing specified the input field is used
  *
- * 		- searchButton			: the search button text
- * 		- searchResultEmpty		: the label if search result was empty
- * 		- searchButtonLoading	: the button text on search
+ *      - searchButton          : the search button text
+ *      - searchResultEmpty     : the label if search result was empty
+ *      - searchButtonLoading   : the button text on search
  * </pre>
  *
  * All parameters can be also set with jQuery <code>data-</code> attributes.
  */
 +function($) {
   'use strict';
+  $('head').append('<link rel="stylesheet" href="../css/jquery.search-entity.css" type="text/css" />');
 
-  /* insert stylesheet via xeditor */
-  $('head').append('<link rel="stylesheet" href="jquery.search-entity.css" type="text/css" />');
-  
   var toggle = '[data-search="searchEntity"]';
 
   var SearchEntity = function(element, options) {
@@ -513,22 +511,38 @@
     var options = this.options;
 
     var $resultBox = $(document.createElement("div"));
-    $resultBox.addClass("row");
-
-    var $resultListContainer = $(document.createElement("div"));
-    $resultListContainer.addClass("col-sm mir-multi-column-dropdown-container");
-    $resultBox.append($resultListContainer);
 
     var $resultList = $(document.createElement("ul"));
     $resultList.attr("role", "menu");
-    $resultList.addClass("multi-column-dropdown mir-multi-column-dropdown");
-    $resultListContainer.append($resultList);
 
-    var $furtherInfoBox = $(document.createElement("div"));
-    $furtherInfoBox.addClass("col-sm mir-multi-column-dropdown-container");
+    if (that.selectedType === "GND" && options.target === ".personExtended_box") {
+        $resultBox.addClass("row");
 
-    var listFurtherInfos = $('<ul>').appendTo($furtherInfoBox);
-    listFurtherInfos.addClass("mir-list-otherInfo");
+        var $resultListContainer = $(document.createElement("div"));
+        $resultListContainer.addClass("col-sm mir-multi-column-dropdown-container");
+        $resultBox.append($resultListContainer);
+
+        $resultList.addClass("multi-column-dropdown mir-multi-column-dropdown");
+        $resultListContainer.append($resultList);
+
+        var $furtherInfoBox = $(document.createElement("div"));
+        $furtherInfoBox.addClass("col-sm mir-multi-column-dropdown-container");
+
+        var listFurtherInfos = $('<ul>').appendTo($furtherInfoBox);
+        listFurtherInfos.addClass("mir-list-otherInfo");
+        
+      } else {
+        $resultBox.addClass("dropdown");
+        $resultList.addClass("dropdown-menu");
+        $resultList.css({
+            height : "auto",
+            maxHeight : options.searchResultMaxHeight,
+            width : "100%",
+            overflow : "auto",
+            overflowX : "hidden"
+          });
+        $resultBox.append($resultList);
+      }
 
     if (data && data.length > 0) {
       $(data).each(function(index, item) {
@@ -543,63 +557,41 @@
           that.updateOutput(item);
           that.clearAll();
         });
-     
-        /* Initial handling on further information on person mouseover */
-        $person.on("mouseover", function (event) {
+        
+        
+        if (that.selectedType === "GND" && options.target === ".personExtended_box") {
+            $person.on("mouseover", function (event) {
 
-            listFurtherInfos.empty();
-            $resultBox.append($furtherInfoBox);
-
-            if (item.value.includes('gnd')) {
+              listFurtherInfos.empty();
+              $resultBox.append($furtherInfoBox);
 
               let urlGNDMarc21 = item.value + '/about/marcxml';
               let urlGNDMarc21Https = urlGNDMarc21.replace("http", "https");
 
               let urlCorsProxy = 'https://cors-anywhere.herokuapp.com/';
+              SearchEntity.loadData(urlCorsProxy + urlGNDMarc21Https, 'xml', '', function(data) {
+                var digits5xx = 3;
 
-              console.log(urlGNDMarc21Https);
-              console.log(urlCorsProxy + urlGNDMarc21Https);
+                var xmlAsString = (new XMLSerializer()).serializeToString(data);
+                var $xmlData = $($.parseXML(xmlAsString));
 
-              $.ajax({
-                url: urlCorsProxy + urlGNDMarc21Https,
-                dataType: 'xml',
-                timeout: 5000,
-                type: 'GET',
-                success: function (response) {
+                var reqAuthFileInformation = {};
 
-                  var digits5xx = 3;
+                $xmlData.find("datafield[tag^='5']").each(function () {
 
-                  var xmlAsString = (new XMLSerializer()).serializeToString(response);
-                  var $xmlData = $($.parseXML(xmlAsString));
+                  if ($(this).attr("tag").length === digits5xx) {
+                    listFurtherInfos.append($(document.createElement('li')).text(
+                      $(this).find("subfield[code='i']").text() + " : " + $(this).find("subfield[code='a']").text()));
 
-                  var reqAuthFileInformation = {};
-
-                  $xmlData.find("datafield[tag^='5']").each(function () {
-
-                    if ($(this).attr("tag").length === digits5xx) {
-
-                      console.log(this);
-
-                      //reqAuthFileInformation[$(this).find("subfield[code='i']").text()] = $(this).find("subfield[code='a']").text();
-
-                      listFurtherInfos.append($(document.createElement('li')).text(
-                        $(this).find("subfield[code='i']").text() + " : " + $(this).find("subfield[code='a']").text()));
-
-                    }
-                  });
-
-                  //simpleComment.text(JSON.stringify(reqAuthFileInformation));
-
-                  //console.log(reqAuthFileInformation);
-
-                },
-                error: function (error) {
-                  console.log(error);
-                }
-              });
-            }
-          });
-     
+                  }
+                });
+              }, function() {
+                console.log('Error on fetching further gnd information with url: ' + urlCorsProxy + urlGNDMarc21Https);
+              })
+            });
+          }
+        
+        
         $li.append($person);
 
         $resultList.append($li);
@@ -611,13 +603,7 @@
     }
 
     $parent.append($resultBox);
-    $resultList.css({
-      height : "auto",
-      maxHeight : options.searchResultMaxHeight,
-      width : "100%",
-      overflow : "auto",
-      overflowX : "hidden"
-    });
+
     $resultList.addClass("show");
 
     this.$element.data($.extend({}, {
